@@ -77,11 +77,11 @@ pub use self::reloc_section::{
 };
 
 /// Deserialization from serial i/o.
-pub trait Deserialize : Sized {
+pub trait Deserialize<O=()> : Sized {
 	/// Serialization error produced by deserialization routine.
 	type Error: From<io::Error>;
 	/// Deserialize type from serial i/o
-	fn deserialize<R: io::Read>(reader: &mut R) -> Result<Self, Self::Error>;
+	fn deserialize<R: io::Read>(reader: &mut R, options: O) -> Result<Self, Self::Error>;
 }
 
 /// Serialization to serial i/o. Takes self by value to consume less memory
@@ -275,8 +275,8 @@ pub struct Unparsed(pub Vec<u8>);
 impl Deserialize for Unparsed {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R) -> Result<Self, Self::Error> {
-		let len = VarUint32::deserialize(reader)?.into();
+	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+		let len = VarUint32::deserialize(reader, ())?.into();
 		let mut vec = vec![0u8; len];
 		reader.read(&mut vec[..])?;
 		Ok(Unparsed(vec))
@@ -290,9 +290,9 @@ impl From<Unparsed> for Vec<u8> {
 }
 
 /// Deserialize deserializable type from buffer.
-pub fn deserialize_buffer<T: Deserialize>(contents: &[u8]) -> Result<T, T::Error> {
+pub fn deserialize_buffer<T: Deserialize<O>, O>(contents: &[u8], options: O) -> Result<T, T::Error> {
 	let mut reader = io::Cursor::new(contents);
-	let result = T::deserialize(&mut reader)?;
+	let result = T::deserialize(&mut reader, options)?;
 	if reader.position() != contents.len() {
 		// It's a TrailingData, since if there is not enough data then
 		// UnexpectedEof must have been returned earlier in T::deserialize.
@@ -314,7 +314,7 @@ pub fn deserialize_file<P: AsRef<::std::path::Path>>(p: P) -> Result<Module, Err
 	let mut f = ::std::fs::File::open(p)
 		.map_err(|e| Error::HeapOther(format!("Can't read from the file: {:?}", e)))?;
 
-	Module::deserialize(&mut f)
+	Module::deserialize(&mut f, ())
 }
 
 /// Serialize module to the file

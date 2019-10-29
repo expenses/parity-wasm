@@ -53,7 +53,7 @@ impl Module {
 
 	/// Construct a module from a slice.
 	pub fn from_bytes<T: AsRef<[u8]>>(input: T) -> Result<Self, Error> {
-		Ok(deserialize_buffer::<Module>(input.as_ref())?)
+		Ok(deserialize_buffer::<Module, ()>(input.as_ref(), ())?)
 	}
 
 	/// Serialize a module to a vector.
@@ -515,7 +515,7 @@ impl Module {
 impl Deserialize for Module {
 	type Error = super::Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
 		let mut sections = Vec::new();
 
 		let mut magic = [0u8; 4];
@@ -524,7 +524,7 @@ impl Deserialize for Module {
 			return Err(Error::InvalidMagic);
 		}
 
-		let version: u32 = Uint32::deserialize(reader)?.into();
+		let version: u32 = Uint32::deserialize(reader, ())?.into();
 
 		if version != 1 {
 			return Err(Error::UnsupportedVersion(version));
@@ -533,7 +533,7 @@ impl Deserialize for Module {
 		let mut last_section_order = 0;
 
 		loop {
-			match Section::deserialize(reader) {
+			match Section::deserialize(reader, ()) {
 				Err(Error::UnexpectedEof) => { break; },
 				Err(e) => { return Err(e) },
 				Ok(section) => {
@@ -611,11 +611,11 @@ pub fn peek_size(source: &[u8]) -> usize {
 	loop {
 		let (new_cursor, section_id, section_len) = {
 			let mut peek_section = PeekSection { cursor: 0, region: &source[cursor..] };
-			let section_id: u8 = match super::VarUint7::deserialize(&mut peek_section) {
+			let section_id: u8 = match super::VarUint7::deserialize(&mut peek_section, ()) {
 				Ok(res) => res.into(),
 				Err(_) => { break; },
 			};
-			let section_len: u32 = match super::VarUint32::deserialize(&mut peek_section) {
+			let section_len: u32 = match super::VarUint32::deserialize(&mut peek_section, ()) {
 				Ok(res) => res.into(),
 				Err(_) => { break; },
 			};

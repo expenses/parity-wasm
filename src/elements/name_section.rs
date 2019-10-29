@@ -75,21 +75,21 @@ impl NameSection {
 		let mut local_names: Option<LocalNameSubsection> = None;
 
 		loop {
-			let subsection_type: u8 = match VarUint7::deserialize(rdr) {
+			let subsection_type: u8 = match VarUint7::deserialize(rdr, ()) {
 				Ok(raw_subsection_type) => raw_subsection_type.into(),
 				// todo: be more selective detecting no more subsection
 				Err(_) => { break; },
 			};
 
 			// deserialize the section size
-			VarUint32::deserialize(rdr)?;
+			VarUint32::deserialize(rdr, ())?;
 
 			match subsection_type {
 				NAME_TYPE_MODULE => {
 					if let Some(_) = module_name {
 						return Err(Error::DuplicatedNameSubsections(NAME_TYPE_FUNCTION));
 					}
-					module_name = Some(ModuleNameSubsection::deserialize(rdr)?);
+					module_name = Some(ModuleNameSubsection::deserialize(rdr, ())?);
 				},
 
 				NAME_TYPE_FUNCTION => {
@@ -184,8 +184,8 @@ impl Serialize for ModuleNameSubsection {
 impl Deserialize for ModuleNameSubsection {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(rdr: &mut R) -> Result<ModuleNameSubsection, Error> {
-		let name = String::deserialize(rdr)?;
+	fn deserialize<R: io::Read>(rdr: &mut R, options: ()) -> Result<ModuleNameSubsection, Error> {
+		let name = String::deserialize(rdr, ())?;
 		Ok(ModuleNameSubsection { name })
 	}
 }

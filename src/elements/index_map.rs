@@ -156,11 +156,11 @@ impl<T> IndexMap<T> {
 		R: io::Read,
 		F: Fn(u32, &mut R) -> Result<T, Error>,
 	{
-		let len: u32 = VarUint32::deserialize(rdr)?.into();
+		let len: u32 = VarUint32::deserialize(rdr, ())?.into();
 		let mut map = IndexMap::with_capacity(len as usize);
 		let mut prev_idx = None;
 		for _ in 0..len {
-			let idx: u32 = VarUint32::deserialize(rdr)?.into();
+			let idx: u32 = VarUint32::deserialize(rdr, ())?.into();
 			if idx as usize >= max_entry_space {
 				return Err(Error::Other("index is larger than expected"));
 			}
@@ -351,7 +351,7 @@ where
 		rdr: &mut R,
 	) -> Result<Self, Error> {
 		let deserialize_value: fn(u32, &mut R) -> Result<T, Error> = |_idx, rdr| {
-			T::deserialize(rdr).map_err(Error::from)
+			T::deserialize(rdr, ()).map_err(Error::from)
 		};
 		Self::deserialize_with(max_entry_space, &deserialize_value, rdr)
 	}
