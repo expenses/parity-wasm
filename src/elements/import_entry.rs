@@ -244,16 +244,16 @@ pub enum External {
 	Global(GlobalType),
 }
 
-impl Deserialize for External {
+impl<V: Validator> Deserialize<V> for External {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
 		let kind = VarUint7::deserialize(reader, &())?;
 		match kind.into() {
 			0x00 => Ok(External::Function(VarUint32::deserialize(reader, &())?.into())),
 			0x01 => Ok(External::Table(TableType::deserialize(reader, &())?)),
 			0x02 => Ok(External::Memory(MemoryType::deserialize(reader, &())?)),
-			0x03 => Ok(External::Global(GlobalType::deserialize(reader, &())?)),
+			0x03 => Ok(External::Global(GlobalType::deserialize(reader, validator)?)),
 			_ => Err(Error::UnknownExternalKind(kind.into())),
 		}
 	}
@@ -329,13 +329,13 @@ impl ImportEntry {
 	pub fn external_mut(&mut self) -> &mut External { &mut self.external }
 }
 
-impl Deserialize for ImportEntry {
+impl<V: Validator> Deserialize<V> for ImportEntry {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
 		let module_str = String::deserialize(reader, &())?;
 		let field_str = String::deserialize(reader, &())?;
-		let external = External::deserialize(reader, &())?;
+		let external = External::deserialize(reader, validator)?;
 
 		Ok(ImportEntry {
 			module_str: module_str,

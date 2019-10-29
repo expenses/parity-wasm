@@ -77,10 +77,10 @@ pub enum Section {
 	Reloc(RelocSection),
 }
 
-impl Deserialize for Section {
+impl<V: Validator> Deserialize<V> for Section {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
 		let id = match VarUint7::deserialize(reader, &()) {
 			// todo: be more selective detecting no more section
 			Err(_) => { return Err(Error::UnexpectedEof); },
@@ -93,10 +93,10 @@ impl Deserialize for Section {
 					Section::Custom(CustomSection::deserialize(reader, &())?.into())
 				},
 				1 => {
-					Section::Type(TypeSection::deserialize(reader, &())?)
+					Section::Type(TypeSection::deserialize(reader, validator)?)
 				},
 				2 => {
-					Section::Import(ImportSection::deserialize(reader, &())?)
+					Section::Import(ImportSection::deserialize(reader, validator)?)
 				},
 				3 => {
 					Section::Function(FunctionSection::deserialize(reader, &())?)
@@ -375,11 +375,11 @@ impl TypeSection {
 	}
 }
 
-impl Deserialize for TypeSection {
+impl<V: Validator> Deserialize<V> for TypeSection {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
-		Ok(TypeSection(read_entries(reader, &())?))
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		Ok(TypeSection(read_entries(reader, validator)?))
 	}
 }
 
@@ -434,11 +434,11 @@ impl ImportSection {
 	}
 }
 
-impl Deserialize for ImportSection {
+impl<V: Validator> Deserialize<V> for ImportSection {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
-		Ok(ImportSection(read_entries(reader, &())?))
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		Ok(ImportSection(read_entries(reader, validator)?))
 	}
 }
 

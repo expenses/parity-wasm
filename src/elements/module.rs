@@ -515,7 +515,7 @@ impl Module {
 impl<V: Validator> Deserialize<V> for Module {
 	type Error = super::Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _validator: &V) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
 		let mut sections = Vec::new();
 
 		let mut magic = [0u8; 4];
@@ -533,7 +533,7 @@ impl<V: Validator> Deserialize<V> for Module {
 		let mut last_section_order = 0;
 
 		loop {
-			match Section::deserialize(reader, &()) {
+			match Section::deserialize(reader, validator) {
 				Err(Error::UnexpectedEof) => { break; },
 				Err(e) => { return Err(e) },
 				Ok(section) => {
