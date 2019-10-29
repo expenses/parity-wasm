@@ -184,7 +184,7 @@ impl Serialize for ModuleNameSubsection {
 impl Deserialize for ModuleNameSubsection {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(rdr: &mut R, options: ()) -> Result<ModuleNameSubsection, Error> {
+	fn deserialize<R: io::Read>(rdr: &mut R, _options: ()) -> Result<ModuleNameSubsection, Error> {
 		let name = String::deserialize(rdr, ())?;
 		Ok(ModuleNameSubsection { name })
 	}

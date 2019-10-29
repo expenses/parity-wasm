@@ -275,7 +275,7 @@ pub struct Unparsed(pub Vec<u8>);
 impl Deserialize for Unparsed {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
 		let len = VarUint32::deserialize(reader, ())?.into();
 		let mut vec = vec![0u8; len];
 		reader.read(&mut vec[..])?;

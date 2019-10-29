@@ -15,7 +15,7 @@ pub enum Type {
 impl Deserialize for Type {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
 		Ok(Type::Function(FunctionType::deserialize(reader, ())?))
 	}
 }
@@ -49,7 +49,7 @@ pub enum ValueType {
 impl Deserialize for ValueType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
 		let val = VarInt7::deserialize(reader, ())?;
 
 		match val.into() {
@@ -106,7 +106,7 @@ pub enum BlockType {
 impl Deserialize for BlockType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
 		let val = VarInt7::deserialize(reader, ())?;
 
 		match val.into() {
@@ -182,7 +182,7 @@ impl FunctionType {
 impl Deserialize for FunctionType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
 		let form: u8 = VarUint7::deserialize(reader, ())?.into();
 
 		if form != 0x60 {
@@ -243,7 +243,7 @@ pub enum TableElementType {
 impl Deserialize for TableElementType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
 		let val = VarInt7::deserialize(reader, ())?;
 
 		match val.into() {
