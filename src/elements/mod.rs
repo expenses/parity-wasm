@@ -77,11 +77,11 @@ pub use self::reloc_section::{
 };
 
 /// Deserialization from serial i/o.
-pub trait Deserialize<O=()> : Sized {
+pub trait Deserialize<Options = ()> : Sized {
 	/// Serialization error produced by deserialization routine.
 	type Error: From<io::Error>;
 	/// Deserialize type from serial i/o
-	fn deserialize<R: io::Read>(reader: &mut R, options: O) -> Result<Self, Self::Error>;
+	fn deserialize<R: io::Read>(reader: &mut R, options: Options) -> Result<Self, Self::Error>;
 }
 
 /// Serialization to serial i/o. Takes self by value to consume less memory
@@ -290,7 +290,7 @@ impl From<Unparsed> for Vec<u8> {
 }
 
 /// Deserialize deserializable type from buffer.
-pub fn deserialize_buffer<T: Deserialize<O>, O>(contents: &[u8], options: O) -> Result<T, T::Error> {
+pub fn deserialize_buffer<T: Deserialize<Options>, Options>(contents: &[u8], options: Options) -> Result<T, T::Error> {
 	let mut reader = io::Cursor::new(contents);
 	let result = T::deserialize(&mut reader, options)?;
 	if reader.position() != contents.len() {
