@@ -12,11 +12,11 @@ pub enum Type {
 	Function(FunctionType),
 }
 
-impl Deserialize for Type {
+impl<V: Validator> Deserialize<V> for Type {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
-		Ok(Type::Function(FunctionType::deserialize(reader, &())?))
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		Ok(Type::Function(FunctionType::deserialize(reader, validator)?))
 	}
 }
 
@@ -63,9 +63,7 @@ impl<V: Validator> Deserialize<V> for ValueType {
 		};
 
 		if let Ok(value_type) = value_type {
-			if !validator.validate_value(value_type) {
-				return Err(Error::ValueFailedToValidate(value_type));
-			}
+			validator.validate_value(value_type)?;
 		}
 
 		value_type
@@ -111,13 +109,13 @@ pub enum BlockType {
 	NoResult,
 }
 
-impl Deserialize for BlockType {
+impl<V: Validator> Deserialize<V> for BlockType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
 		let val = VarInt7::deserialize(reader, &())?;
 
-		match val.into() {
+		let block_type = match val.into() {
 			-0x01 => Ok(BlockType::Value(ValueType::I32)),
 			-0x02 => Ok(BlockType::Value(ValueType::I64)),
 			-0x03 => Ok(BlockType::Value(ValueType::F32)),
@@ -126,7 +124,13 @@ impl Deserialize for BlockType {
 			0x7b => Ok(BlockType::Value(ValueType::V128)),
 			-0x40 => Ok(BlockType::NoResult),
 			_ => Err(Error::UnknownValueType(val.into())),
+		};
+
+		if let Ok(BlockType::Value(value_type)) = block_type {
+			validator.validate_value(value_type)?;
 		}
+
+		block_type
 	}
 }
 
@@ -202,7 +206,7 @@ impl<V: Validator> Deserialize<V> for FunctionType {
 		let return_types: u32 = VarUint32::deserialize(reader, &())?.into();
 
 		let return_type = if return_types == 1 {
-			Some(ValueType::deserialize(reader, &())?)
+			Some(ValueType::deserialize(reader, validator)?)
 		} else if return_types == 0 {
 			None
 		} else {

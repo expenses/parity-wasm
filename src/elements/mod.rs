@@ -166,8 +166,6 @@ pub enum Error {
 	DuplicatedNameSubsections(u8),
 	/// Unknown name subsection type.
 	UnknownNameSubsectionType(u8),
-	/// Invalid type
-	ValueFailedToValidate(ValueType)
 }
 
 impl fmt::Display for Error {
@@ -208,7 +206,6 @@ impl fmt::Display for Error {
 			Error::TooManyLocals => write!(f, "Too many locals"),
 			Error::DuplicatedNameSubsections(n) =>  write!(f, "Duplicated name subsections: {}", n),
 			Error::UnknownNameSubsectionType(n) => write!(f, "Unknown subsection type: {}", n),
-			Error::ValueFailedToValidate(value) => write!(f, "Value failed to validate: {}", value),
 		}
 	}
 }
@@ -250,7 +247,6 @@ impl ::std::error::Error for Error {
 			Error::TooManyLocals => "Too many locals",
 			Error::DuplicatedNameSubsections(_) =>  "Duplicated name subsections",
 			Error::UnknownNameSubsectionType(_) => "Unknown name subsections type",
-			Error::ValueFailedToValidate(_) => "Value failed to validate",
 		}
 	}
 }
@@ -336,11 +332,11 @@ pub fn serialize_to_file<P: AsRef<::std::path::Path>>(p: P, module: Module) -> R
 /// WASM Validator. Useful for things like smart contracts, where `f32`s aren't allowed.
 pub trait Validator {
 	/// Validate a value.
-	fn validate_value(&self, value: ValueType) -> bool;
+	fn validate_value(&self, value: ValueType) -> Result<(), Error>;
 }
 
 impl Validator for () {
-	fn validate_value(&self, _value: ValueType) -> bool {
-		true
+	fn validate_value(&self, _value: ValueType) -> Result<(), Error> {
+		Ok(())
 	}
 }

@@ -22,13 +22,13 @@ pub fn spec(path: &str) {
 	while let Some(Command { kind, line }) = parser.next().expect("Failed to iterate") {
 		match kind {
 			CommandKind::AssertMalformed { module, .. } => {
-				match deserialize_buffer::<Module, ()>(&module.into_vec()) {
+				match deserialize_buffer::<Module, _>(&module.into_vec(), &()) {
 					Ok(_) => panic!("Expected invalid module definition, got some module! at line {}", line),
 					Err(e) => println!("assert_invalid at line {} - success ({:?})", line, e),
 				}
 			}
 			CommandKind::Module { module, .. } => {
-				match deserialize_buffer::<Module, ()>(&module.into_vec()) {
+				match deserialize_buffer::<Module, _>(&module.into_vec(), &()) {
 					Ok(_) => println!("module at line {} - parsed ok", line),
 					Err(e) => panic!("Valid module reported error ({:?})", e),
 				}

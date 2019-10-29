@@ -2,7 +2,7 @@ use crate::rust::string::String;
 use crate::io;
 use super::{
 	Deserialize, Serialize, Error, VarUint7, VarInt7, VarUint32, VarUint1, Uint8,
-	ValueType, TableElementType
+	ValueType, TableElementType, Validator
 };
 
 const FLAG_HAS_MAX: u8 = 0x01;
@@ -32,11 +32,11 @@ impl GlobalType {
 	pub fn is_mutable(&self) -> bool { self.is_mutable }
 }
 
-impl Deserialize for GlobalType {
+impl<V: Validator> Deserialize<V> for GlobalType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
-		let content_type = ValueType::deserialize(reader, &())?;
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		let content_type = ValueType::deserialize(reader, validator)?;
 		let is_mutable = VarUint1::deserialize(reader, &())?;
 		Ok(GlobalType {
 			content_type: content_type,

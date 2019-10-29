@@ -1,7 +1,7 @@
 use crate::rust::vec::Vec;
 use super::{
 	Deserialize, Error, ValueType, VarUint32, CountedList, Instructions,
-	Serialize, CountedWriter, CountedListWriter,
+	Serialize, CountedWriter, CountedListWriter, Validator
 };
 use crate::{io, elements::section::SectionReader};
 
@@ -60,12 +60,12 @@ impl Local {
 	pub fn value_type(&self) -> ValueType { self.value_type }
 }
 
-impl Deserialize for Local {
+impl<V: Validator> Deserialize<V> for Local {
 	 type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
 		let count = VarUint32::deserialize(reader, &())?;
-		let value_type = ValueType::deserialize(reader, &())?;
+		let value_type = ValueType::deserialize(reader, validator)?;
 		Ok(Local { count: count.into(), value_type: value_type })
 	}
 }
