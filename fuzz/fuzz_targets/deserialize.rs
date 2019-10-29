@@ -12,7 +12,7 @@ fuzz_target!(|data: &[u8]| {
 
 	let wasm = binaryen_module.write();
 
-	let _module: parity_wasm::elements::Module = parity_wasm::deserialize_buffer(&wasm)
+	let _module: parity_wasm::elements::Module = parity_wasm::deserialize_buffer(&wasm, ())
 		.expect(
 			"deserialize output of wasm-opt, indicating possible bug in deserializer",
 		);

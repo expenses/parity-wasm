@@ -54,7 +54,7 @@ fn main() {
 
 	// Here we load module using dedicated for this purpose
 	// `deserialize_file` function (which works only with modules)
-	let module = parity_wasm::deserialize_file(&args[1]).expect("File to be deserialized");
+	let module = parity_wasm::deserialize_file(&args[1], ()).expect("File to be deserialized");
 
 	// Query the export section from the loaded module. Note that not every
 	// wasm module obliged to contain export section. So in case there is no

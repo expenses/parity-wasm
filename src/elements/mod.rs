@@ -290,9 +290,9 @@ impl From<Unparsed> for Vec<u8> {
 }
 
 /// Deserialize deserializable type from buffer.
-pub fn deserialize_buffer<T: Deserialize<Options>, Options>(contents: &[u8], options: Options) -> Result<T, T::Error> {
+pub fn deserialize_buffer<T: Deserialize<V>, V: Validator>(contents: &[u8], validator: V) -> Result<T, T::Error> {
 	let mut reader = io::Cursor::new(contents);
-	let result = T::deserialize(&mut reader, options)?;
+	let result = T::deserialize(&mut reader, validator)?;
 	if reader.position() != contents.len() {
 		// It's a TrailingData, since if there is not enough data then
 		// UnexpectedEof must have been returned earlier in T::deserialize.
@@ -310,11 +310,11 @@ pub fn serialize<T: Serialize>(val: T) -> Result<Vec<u8>, T::Error> {
 
 /// Deserialize module from the file.
 #[cfg(feature = "std")]
-pub fn deserialize_file<P: AsRef<::std::path::Path>>(p: P) -> Result<Module, Error> {
+pub fn deserialize_file<P: AsRef<::std::path::Path>, V: Validator>(p: P, validator: V) -> Result<Module, Error> {
 	let mut f = ::std::fs::File::open(p)
 		.map_err(|e| Error::HeapOther(format!("Can't read from the file: {:?}", e)))?;
 
-	Module::deserialize(&mut f, ())
+	Module::deserialize(&mut f, validator)
 }
 
 /// Serialize module to the file
@@ -327,4 +327,14 @@ pub fn serialize_to_file<P: AsRef<::std::path::Path>>(p: P, module: Module) -> R
 
 	module.serialize(&mut io)?;
 	Ok(())
+}
+
+pub trait Validator {
+	fn validate_value(&self, value: ValueType) -> bool;
+}
+
+impl Validator for () {
+	fn validate_value(&self, _value: ValueType) -> bool {
+		true
+	}
 }

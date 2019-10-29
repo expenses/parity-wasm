@@ -828,7 +828,7 @@ mod tests {
 
 	#[test]
 	fn import_section() {
-		let module = deserialize_file("./res/cases/v1/test5.wasm").expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
 		let mut found = false;
 		for section in module.sections() {
 			match section {
@@ -864,7 +864,7 @@ mod tests {
 	#[test]
 	fn fn_section_detect() {
 		let section: Section =
-			deserialize_buffer(functions_test_payload()).expect("section to be deserialized");
+			deserialize_buffer(functions_test_payload(), ()).expect("section to be deserialized");
 
 		match section {
 			Section::Function(_) => {},
@@ -877,7 +877,7 @@ mod tests {
 	#[test]
 	fn fn_section_number() {
 		let section: Section =
-			deserialize_buffer(functions_test_payload()).expect("section to be deserialized");
+			deserialize_buffer(functions_test_payload(), ()).expect("section to be deserialized");
 
 		match section {
 			Section::Function(fn_section) => {
@@ -892,7 +892,7 @@ mod tests {
 	#[test]
 	fn fn_section_ref() {
 		let section: Section =
-			deserialize_buffer(functions_test_payload()).expect("section to be deserialized");
+			deserialize_buffer(functions_test_payload(), ()).expect("section to be deserialized");
 
 		match section {
 			Section::Function(fn_section) => {
@@ -936,7 +936,7 @@ mod tests {
 	#[test]
 	fn type_section_len() {
 		let type_section: TypeSection =
-			deserialize_buffer(types_test_payload()).expect("type_section be deserialized");
+			deserialize_buffer(types_test_payload(), ()).expect("type_section be deserialized");
 
 		assert_eq!(type_section.types().len(), 2);
 	}
@@ -944,7 +944,7 @@ mod tests {
 	#[test]
 	fn type_section_infer() {
 		let type_section: TypeSection =
-			deserialize_buffer(types_test_payload()).expect("type_section be deserialized");
+			deserialize_buffer(types_test_payload(), ()).expect("type_section be deserialized");
 
 		let t1 = match &type_section.types()[1] {
 			&Type::Function(ref func_type) => func_type
@@ -982,7 +982,7 @@ mod tests {
 	#[test]
 	fn export_detect() {
 		let section: Section =
-			deserialize_buffer(export_payload()).expect("section to be deserialized");
+			deserialize_buffer(export_payload(), ()).expect("section to be deserialized");
 
 		match section {
 			Section::Export(_) => {},
@@ -1026,7 +1026,7 @@ mod tests {
 	fn code_detect() {
 
 		let section: Section =
-			deserialize_buffer(code_payload()).expect("section to be deserialized");
+			deserialize_buffer(code_payload(), ()).expect("section to be deserialized");
 
 		match section {
 			Section::Code(_) => {},
@@ -1076,7 +1076,7 @@ mod tests {
 	#[test]
 	fn data_section_detect() {
 		let section: Section =
-			deserialize_buffer(data_payload()).expect("section to be deserialized");
+			deserialize_buffer(data_payload(), ()).expect("section to be deserialized");
 
 		match section {
 			Section::Data(_) => {},
@@ -1140,7 +1140,7 @@ mod tests {
 
 	#[test]
 	fn start_section() {
-		let section: Section = deserialize_buffer(&[08u8, 01u8, 00u8]).expect("Start section to deserialize");
+		let section: Section = deserialize_buffer(&[08u8, 01u8, 00u8], ()).expect("Start section to deserialize");
 		if let Section::Start(_) = section {
 		} else {
 			panic!("Payload should be a start section");

@@ -2905,7 +2905,7 @@ impl Serialize for InitExpr {
 #[test]
 fn ifelse() {
 	// see if-else.wast/if-else.wasm
-	let instruction_list = super::deserialize_buffer::<Instructions>(&[0x04, 0x7F, 0x41, 0x05, 0x05, 0x41, 0x07, 0x0B, 0x0B])
+	let instruction_list = super::deserialize_buffer::<Instructions, _>(&[0x04, 0x7F, 0x41, 0x05, 0x05, 0x41, 0x07, 0x0B, 0x0B], ())
 		.expect("valid hex of if instruction");
 	let instructions = instruction_list.elements();
 	match &instructions[0] {

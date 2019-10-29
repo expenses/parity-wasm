@@ -327,7 +327,7 @@ mod tests {
 	#[test]
 	fn reloc_section() {
 		let module =
-			deserialize_file("./res/cases/v1/relocatable.wasm").expect("Module should be deserialized")
+			deserialize_file("./res/cases/v1/relocatable.wasm", ()).expect("Module should be deserialized")
 			.parse_reloc().expect("Reloc section should be deserialized");
 		let mut found = false;
 		for section in module.sections() {

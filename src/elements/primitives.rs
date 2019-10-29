@@ -631,7 +631,7 @@ mod tests {
 	}
 
 	fn varuint32_de_test(dt: Vec<u8>, expected: u32) {
-		let val: VarUint32 = super::super::deserialize_buffer(&dt).expect("buf to be serialized");
+		let val: VarUint32 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -648,7 +648,7 @@ mod tests {
 	}
 
 	fn varint32_de_test(dt: Vec<u8>, expected: i32) {
-		let val: VarInt32 = super::super::deserialize_buffer(&dt).expect("buf to be serialized");
+		let val: VarInt32 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -665,7 +665,7 @@ mod tests {
 	}
 
 	fn varuint64_de_test(dt: Vec<u8>, expected: u64) {
-		let val: VarUint64 = super::super::deserialize_buffer(&dt).expect("buf to be serialized");
+		let val: VarUint64 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -682,7 +682,7 @@ mod tests {
 	}
 
 	fn varint64_de_test(dt: Vec<u8>, expected: i64) {
-		let val: VarInt64 = super::super::deserialize_buffer(&dt).expect("buf to be serialized");
+		let val: VarInt64 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -761,19 +761,19 @@ mod tests {
 
 	#[test]
 	fn varint64_bad_extended() {
-		let res = deserialize_buffer::<VarInt64>(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x6f][..]);
+		let res = deserialize_buffer::<VarInt64, _>(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x6f][..], ());
 		assert!(res.is_err());
 	}
 
 	#[test]
 	fn varint32_bad_extended() {
-		let res = deserialize_buffer::<VarInt32>(&[0x80, 0x80, 0x80, 0x80, 0x6f][..]);
+		let res = deserialize_buffer::<VarInt32, _>(&[0x80, 0x80, 0x80, 0x80, 0x6f][..], ());
 		assert!(res.is_err());
 	}
 
 	#[test]
 	fn varint32_bad_extended2() {
-		let res = deserialize_buffer::<VarInt32>(&[0x80, 0x80, 0x80, 0x80, 0x41][..]);
+		let res = deserialize_buffer::<VarInt32, _>(&[0x80, 0x80, 0x80, 0x80, 0x41][..], ());
 		assert!(res.is_err());
 	}
 
@@ -788,8 +788,8 @@ mod tests {
 	#[test]
 	fn varint64_too_long() {
 		assert!(
-			deserialize_buffer::<VarInt64>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..],
+			deserialize_buffer::<VarInt64, _>(
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
 			).is_err()
 		);
 	}
@@ -797,8 +797,8 @@ mod tests {
 	#[test]
 	fn varint32_too_long() {
 		assert!(
-			deserialize_buffer::<VarInt32>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..],
+			deserialize_buffer::<VarInt32, _>(
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
 			).is_err()
 		);
 	}
@@ -806,8 +806,8 @@ mod tests {
 	#[test]
 	fn varuint64_too_long() {
 		assert!(
-			deserialize_buffer::<VarUint64>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..],
+			deserialize_buffer::<VarUint64, _>(
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
 			).is_err()
 		);
 	}
@@ -815,8 +815,8 @@ mod tests {
 	#[test]
 	fn varuint32_too_long() {
 		assert!(
-			deserialize_buffer::<VarUint32>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..],
+			deserialize_buffer::<VarUint32, _>(
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
 			).is_err()
 		);
 	}
@@ -824,8 +824,8 @@ mod tests {
 	#[test]
 	fn varuint32_too_long_trailing() {
 		assert!(
-			deserialize_buffer::<VarUint32>(
-				&[0xff, 0xff, 0xff, 0xff, 0x7f][..],
+			deserialize_buffer::<VarUint32, _>(
+				&[0xff, 0xff, 0xff, 0xff, 0x7f][..], ()
 			).is_err()
 		);
 	}
@@ -833,8 +833,8 @@ mod tests {
 	#[test]
 	fn varuint64_too_long_trailing() {
 		assert!(
-			deserialize_buffer::<VarUint64>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x04][..],
+			deserialize_buffer::<VarUint64, _>(
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x04][..], ()
 			).is_err()
 		);
 	}
@@ -849,7 +849,7 @@ mod tests {
 
 	#[test]
 	fn varint7_invalid() {
-		match deserialize_buffer::<VarInt7>(&[240]) {
+		match deserialize_buffer::<VarInt7, _>(&[240], ()) {
 			Err(Error::InvalidVarInt7(_)) => {},
 			_ => panic!("Should be invalid varint7 error!")
 		}
@@ -857,13 +857,13 @@ mod tests {
 
 	#[test]
 	fn varint7_neg() {
-		assert_eq!(-0x10i8, deserialize_buffer::<VarInt7>(&[0x70]).expect("fail").into());
+		assert_eq!(-0x10i8, deserialize_buffer::<VarInt7, _>(&[0x70], ()).expect("fail").into());
 	}
 
 	#[test]
 	fn varuint32_too_long_nulled() {
-		match deserialize_buffer::<VarUint32>(
-			&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x78]
+		match deserialize_buffer::<VarUint32, _>(
+			&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x78], ()
 		) {
 			Err(Error::InvalidVarUint32) => {},
 			_ => panic!("Should be invalid varuint32"),
@@ -892,7 +892,7 @@ mod tests {
 		];
 
 		let list: CountedList<VarInt7> =
-			deserialize_buffer(&payload).expect("type_section be deserialized");
+			deserialize_buffer(&payload, ()).expect("type_section be deserialized");
 
 		let vars = list.into_inner();
 		assert_eq!(5, vars.len());

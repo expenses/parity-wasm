@@ -350,7 +350,7 @@ mod tests {
 
 	#[test]
 	fn deserialize_local_names() {
-		let module = super::super::deserialize_file("./res/cases/v1/names_with_imports.wasm")
+		let module = super::super::deserialize_file("./res/cases/v1/names_with_imports.wasm", ())
 			.expect("Should be deserialized")
 			.parse_names()
 			.expect("Names to be parsed");

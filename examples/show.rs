@@ -9,7 +9,7 @@ fn main() {
 		return;
 	}
 
-	let module = parity_wasm::deserialize_file(&args[1]).expect("Failed to load module");
+	let module = parity_wasm::deserialize_file(&args[1], ()).expect("Failed to load module");
 	let function_index = args[2].parse::<usize>().expect("Failed to parse function index");
 
 	if module.code_section().is_none() {
