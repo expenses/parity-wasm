@@ -2,7 +2,7 @@ use crate::rust::{fmt, vec::Vec};
 use crate::io;
 use super::{
 	Deserialize, Serialize, Error, VarUint7, VarInt7, VarUint1, CountedList,
-	CountedListWriter, VarUint32,
+	CountedListWriter, VarUint32, Validator
 };
 
 /// Type definition in types section. Currently can be only of the function type.
@@ -15,8 +15,8 @@ pub enum Type {
 impl Deserialize for Type {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		Ok(Type::Function(FunctionType::deserialize(reader, ())?))
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		Ok(Type::Function(FunctionType::deserialize(reader, &())?))
 	}
 }
 
@@ -46,13 +46,13 @@ pub enum ValueType {
 	V128,
 }
 
-impl Deserialize for ValueType {
+impl<V: Validator> Deserialize<V> for ValueType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let val = VarInt7::deserialize(reader, ())?;
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		let val = VarInt7::deserialize(reader, &())?;
 
-		match val.into() {
+		let value_type = match val.into() {
 			-0x01 => Ok(ValueType::I32),
 			-0x02 => Ok(ValueType::I64),
 			-0x03 => Ok(ValueType::F32),
@@ -60,7 +60,15 @@ impl Deserialize for ValueType {
 			#[cfg(feature="simd")]
 			-0x05 => Ok(ValueType::V128),
 			_ => Err(Error::UnknownValueType(val.into())),
+		};
+
+		if let Ok(value_type) = value_type {
+			if !validator.validate_value(value_type) {
+				return Err(Error::ValueFailedToValidate(value_type));
+			}
 		}
+
+		value_type
 	}
 }
 
@@ -106,8 +114,8 @@ pub enum BlockType {
 impl Deserialize for BlockType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let val = VarInt7::deserialize(reader, ())?;
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let val = VarInt7::deserialize(reader, &())?;
 
 		match val.into() {
 			-0x01 => Ok(BlockType::Value(ValueType::I32)),
@@ -179,22 +187,22 @@ impl FunctionType {
 	pub fn return_type_mut(&mut self) -> &mut Option<ValueType> { &mut self.return_type }
 }
 
-impl Deserialize for FunctionType {
+impl<V: Validator> Deserialize<V> for FunctionType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let form: u8 = VarUint7::deserialize(reader, ())?.into();
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		let form: u8 = VarUint7::deserialize(reader, &())?.into();
 
 		if form != 0x60 {
 			return Err(Error::UnknownFunctionForm(form));
 		}
 
-		let params: Vec<ValueType> = CountedList::deserialize(reader, ())?.into_inner();
+		let params: Vec<ValueType> = CountedList::deserialize(reader, validator)?.into_inner();
 
-		let return_types: u32 = VarUint32::deserialize(reader, ())?.into();
+		let return_types: u32 = VarUint32::deserialize(reader, &())?.into();
 
 		let return_type = if return_types == 1 {
-			Some(ValueType::deserialize(reader, ())?)
+			Some(ValueType::deserialize(reader, &())?)
 		} else if return_types == 0 {
 			None
 		} else {
@@ -243,8 +251,8 @@ pub enum TableElementType {
 impl Deserialize for TableElementType {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let val = VarInt7::deserialize(reader, ())?;
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let val = VarInt7::deserialize(reader, &())?;
 
 		match val.into() {
 			-0x10 => Ok(TableElementType::AnyFunc),

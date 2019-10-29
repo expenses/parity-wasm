@@ -52,7 +52,7 @@ impl Module {
 	}
 
 	/// Construct a module from a slice.
-	pub fn from_bytes<T: AsRef<[u8]>, V: Validator>(input: T, validator: V) -> Result<Self, Error> {
+	pub fn from_bytes<T: AsRef<[u8]>, V: Validator>(input: T, validator: &V) -> Result<Self, Error> {
 		Ok(deserialize_buffer::<Module, V>(input.as_ref(), validator)?)
 	}
 
@@ -515,7 +515,7 @@ impl Module {
 impl<V: Validator> Deserialize<V> for Module {
 	type Error = super::Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _validator: V) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _validator: &V) -> Result<Self, Self::Error> {
 		let mut sections = Vec::new();
 
 		let mut magic = [0u8; 4];
@@ -524,7 +524,7 @@ impl<V: Validator> Deserialize<V> for Module {
 			return Err(Error::InvalidMagic);
 		}
 
-		let version: u32 = Uint32::deserialize(reader, ())?.into();
+		let version: u32 = Uint32::deserialize(reader, &())?.into();
 
 		if version != 1 {
 			return Err(Error::UnsupportedVersion(version));
@@ -533,7 +533,7 @@ impl<V: Validator> Deserialize<V> for Module {
 		let mut last_section_order = 0;
 
 		loop {
-			match Section::deserialize(reader, ()) {
+			match Section::deserialize(reader, &()) {
 				Err(Error::UnexpectedEof) => { break; },
 				Err(e) => { return Err(e) },
 				Ok(section) => {
@@ -611,11 +611,11 @@ pub fn peek_size(source: &[u8]) -> usize {
 	loop {
 		let (new_cursor, section_id, section_len) = {
 			let mut peek_section = PeekSection { cursor: 0, region: &source[cursor..] };
-			let section_id: u8 = match super::VarUint7::deserialize(&mut peek_section, ()) {
+			let section_id: u8 = match super::VarUint7::deserialize(&mut peek_section, &()) {
 				Ok(res) => res.into(),
 				Err(_) => { break; },
 			};
-			let section_len: u32 = match super::VarUint32::deserialize(&mut peek_section, ()) {
+			let section_len: u32 = match super::VarUint32::deserialize(&mut peek_section, &()) {
 				Ok(res) => res.into(),
 				Err(_) => { break; },
 			};
@@ -647,7 +647,7 @@ mod integration_tests {
 
 	#[test]
 	fn hello() {
-		let module = deserialize_file("./res/cases/v1/hello.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/hello.wasm", &()).expect("Should be deserialized");
 
 		assert_eq!(module.version(), 1);
 		assert_eq!(module.sections().len(), 8);
@@ -655,26 +655,26 @@ mod integration_tests {
 
 	#[test]
 	fn serde() {
-		let module = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		let buf = serialize(module).expect("serialization to succeed");
 
-		let module_new: Module = deserialize_buffer(&buf, ()).expect("deserialization to succeed");
-		let module_old = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let module_new: Module = deserialize_buffer(&buf, &()).expect("deserialization to succeed");
+		let module_old = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 
 		assert_eq!(module_old.sections().len(), module_new.sections().len());
 	}
 
 	#[test]
 	fn serde_type() {
-		let mut module = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let mut module = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		module.sections_mut().retain(|x| {
 			if let &Section::Type(_) = x { true } else { false }
 		});
 
 		let buf = serialize(module).expect("serialization to succeed");
 
-		let module_new: Module = deserialize_buffer(&buf, ()).expect("deserialization to succeed");
-		let module_old = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let module_new: Module = deserialize_buffer(&buf, &()).expect("deserialization to succeed");
+		let module_old = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		assert_eq!(
 			module_old.type_section().expect("type section exists").types().len(),
 			module_new.type_section().expect("type section exists").types().len(),
@@ -684,15 +684,15 @@ mod integration_tests {
 
 	#[test]
 	fn serde_import() {
-		let mut module = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let mut module = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		module.sections_mut().retain(|x| {
 			if let &Section::Import(_) = x { true } else { false }
 		});
 
 		let buf = serialize(module).expect("serialization to succeed");
 
-		let module_new: Module = deserialize_buffer(&buf, ()).expect("deserialization to succeed");
-		let module_old = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let module_new: Module = deserialize_buffer(&buf, &()).expect("deserialization to succeed");
+		let module_old = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		assert_eq!(
 			module_old.import_section().expect("import section exists").entries().len(),
 			module_new.import_section().expect("import section exists").entries().len(),
@@ -702,7 +702,7 @@ mod integration_tests {
 
 	#[test]
 	fn serde_code() {
-		let mut module = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let mut module = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		module.sections_mut().retain(|x| {
 			if let &Section::Code(_) = x { return true }
 			if let &Section::Function(_) = x { true } else { false }
@@ -710,8 +710,8 @@ mod integration_tests {
 
 		let buf = serialize(module).expect("serialization to succeed");
 
-		let module_new: Module = deserialize_buffer(&buf, ()).expect("deserialization to succeed");
-		let module_old = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let module_new: Module = deserialize_buffer(&buf, &()).expect("deserialization to succeed");
+		let module_old = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		assert_eq!(
 			module_old.code_section().expect("code section exists").bodies().len(),
 			module_new.code_section().expect("code section exists").bodies().len(),
@@ -723,7 +723,7 @@ mod integration_tests {
 	fn const_() {
 		use super::super::Instruction::*;
 
-		let module = deserialize_file("./res/cases/v1/const.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/const.wasm", &()).expect("Should be deserialized");
 		let func = &module.code_section().expect("Code section to exist").bodies()[0];
 		assert_eq!(func.code().elements().len(), 20);
 
@@ -751,7 +751,7 @@ mod integration_tests {
 	fn store() {
 		use super::super::Instruction::*;
 
-		let module = deserialize_file("./res/cases/v1/offset.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/offset.wasm", &()).expect("Should be deserialized");
 		let func = &module.code_section().expect("Code section to exist").bodies()[0];
 
 		assert_eq!(func.code().elements().len(), 5);
@@ -762,7 +762,7 @@ mod integration_tests {
 	fn peek() {
 		use super::peek_size;
 
-		let module = deserialize_file("./res/cases/v1/test5.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/test5.wasm", &()).expect("Should be deserialized");
 		let mut buf = serialize(module).expect("serialization to succeed");
 
 		buf.extend_from_slice(&[1, 5, 12, 17]);
@@ -775,7 +775,7 @@ mod integration_tests {
 	fn peek_2() {
 		use super::peek_size;
 
-		let module = deserialize_file("./res/cases/v1/offset.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/offset.wasm", &()).expect("Should be deserialized");
 		let mut buf = serialize(module).expect("serialization to succeed");
 
 		buf.extend_from_slice(&[0, 0, 0, 0, 0, 1, 5, 12, 17]);
@@ -787,7 +787,7 @@ mod integration_tests {
 	fn peek_3() {
 		use super::peek_size;
 
-		let module = deserialize_file("./res/cases/v1/peek_sample.wasm", ()).expect("Should be deserialized");
+		let module = deserialize_file("./res/cases/v1/peek_sample.wasm", &()).expect("Should be deserialized");
 		let buf = serialize(module).expect("serialization to succeed");
 
 		assert_eq!(peek_size(&buf), buf.len());
@@ -798,13 +798,13 @@ mod integration_tests {
 		let module1 = Module::default();
 		let buf = serialize(module1).expect("Serialization should succeed");
 
-		let module2: Module = deserialize_buffer(&buf, ()).expect("Deserialization should succeed");
+		let module2: Module = deserialize_buffer(&buf, &()).expect("Deserialization should succeed");
 		assert_eq!(Module::default().magic, module2.magic);
 	}
 
 	#[test]
 	fn names() {
-		let module = deserialize_file("./res/cases/v1/with_names.wasm", ())
+		let module = deserialize_file("./res/cases/v1/with_names.wasm", &())
 			.expect("Should be deserialized")
 			.parse_names()
 			.expect("Names to be parsed");
@@ -837,20 +837,20 @@ mod integration_tests {
 	// This test fixture has FLAG_SHARED so it depends on atomics feature.
 	#[test]
 	fn shared_memory_flag() {
-		let module = deserialize_file("./res/cases/v1/varuint1_1.wasm", ());
+		let module = deserialize_file("./res/cases/v1/varuint1_1.wasm", &());
 		assert_eq!(module.is_ok(), cfg!(feature="atomics"));
 	}
 
 
 	#[test]
 	fn memory_space() {
-		let module = deserialize_file("./res/cases/v1/two-mems.wasm", ()).expect("failed to deserialize");
+		let module = deserialize_file("./res/cases/v1/two-mems.wasm", &()).expect("failed to deserialize");
 		assert_eq!(module.memory_space(), 2);
 	}
 
     #[test]
     fn add_custom_section() {
-        let mut module = deserialize_file("./res/cases/v1/start_mut.wasm", ()).expect("failed to deserialize");
+        let mut module = deserialize_file("./res/cases/v1/start_mut.wasm", &()).expect("failed to deserialize");
         assert!(module.custom_sections().next().is_none());
         module.set_custom_section("mycustomsection".to_string(), vec![1, 2, 3, 4]);
         {
@@ -868,7 +868,7 @@ mod integration_tests {
 
     #[test]
     fn mut_start() {
-        let mut module = deserialize_file("./res/cases/v1/start_mut.wasm", ()).expect("failed to deserialize");
+        let mut module = deserialize_file("./res/cases/v1/start_mut.wasm", &()).expect("failed to deserialize");
         assert_eq!(module.start_section().expect("Did not find any start section"), 1);
         module.set_start_section(0);
         assert_eq!(module.start_section().expect("Did not find any start section"), 0);
@@ -878,7 +878,7 @@ mod integration_tests {
 
     #[test]
     fn add_start() {
-        let mut module = deserialize_file("./res/cases/v1/start_add.wasm", ()).expect("failed to deserialize");
+        let mut module = deserialize_file("./res/cases/v1/start_add.wasm", &()).expect("failed to deserialize");
         assert!(module.start_section().is_none());
         module.set_start_section(0);
         assert_eq!(module.start_section().expect("Did not find any start section"), 0);
@@ -889,7 +889,7 @@ mod integration_tests {
 
     #[test]
     fn add_start_custom() {
-        let mut module = deserialize_file("./res/cases/v1/start_add_custom.wasm", ()).expect("failed to deserialize");
+        let mut module = deserialize_file("./res/cases/v1/start_add_custom.wasm", &()).expect("failed to deserialize");
 
         let sections = module.sections().iter().map(|s| s.order()).collect::<Vec<_>>();
         assert_eq!(sections, vec![1, 2, 3, 6, 7, 9, 11, 12, 0]);
@@ -904,7 +904,7 @@ mod integration_tests {
 
     #[test]
     fn names_section_present() {
-        let mut module = deserialize_file("./res/cases/v1/names.wasm", ()).expect("failed to deserialize");
+        let mut module = deserialize_file("./res/cases/v1/names.wasm", &()).expect("failed to deserialize");
 
         // Before parsing
         assert!(module.names_section().is_none());
@@ -920,7 +920,7 @@ mod integration_tests {
 
     #[test]
     fn names_section_not_present() {
-        let mut module = deserialize_file("./res/cases/v1/test.wasm", ()).expect("failed to deserialize");
+        let mut module = deserialize_file("./res/cases/v1/test.wasm", &()).expect("failed to deserialize");
 
         // Before parsing
         assert!(module.names_section().is_none());
@@ -956,14 +956,14 @@ mod integration_tests {
 
         // Try serialisation roundtrip to check well-orderedness.
         let serialized = serialize(module).expect("serialization to succeed");
-        assert!(deserialize_buffer::<Module, _>(&serialized, ()).is_ok());
+        assert!(deserialize_buffer::<Module, _>(&serialized, &()).is_ok());
     }
 
     #[test]
     fn serialization_roundtrip() {
-        let module = deserialize_file("./res/cases/v1/test.wasm", ()).expect("failed to deserialize");
+        let module = deserialize_file("./res/cases/v1/test.wasm", &()).expect("failed to deserialize");
         let module_copy = module.clone().to_bytes().expect("failed to serialize");
-        let module_copy = Module::from_bytes(&module_copy, ()).expect("failed to deserialize");
+        let module_copy = Module::from_bytes(&module_copy, &()).expect("failed to deserialize");
         assert_eq!(module, module_copy);
     }
 }

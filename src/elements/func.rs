@@ -35,8 +35,8 @@ impl Serialize for Func {
 impl Deserialize for Func {
 	 type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		Ok(Func(VarUint32::deserialize(reader, ())?.into()))
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		Ok(Func(VarUint32::deserialize(reader, &())?.into()))
 	}
 }
 
@@ -63,9 +63,9 @@ impl Local {
 impl Deserialize for Local {
 	 type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let count = VarUint32::deserialize(reader, ())?;
-		let value_type = ValueType::deserialize(reader, ())?;
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let count = VarUint32::deserialize(reader, &())?;
+		let value_type = ValueType::deserialize(reader, &())?;
 		Ok(Local { count: count.into(), value_type: value_type })
 	}
 }
@@ -116,9 +116,9 @@ impl FuncBody {
 impl Deserialize for FuncBody {
 	 type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut body_reader = SectionReader::new(reader)?;
-		let locals: Vec<Local> = CountedList::<Local>::deserialize(&mut body_reader, ())?.into_inner();
+		let locals: Vec<Local> = CountedList::<Local, _>::deserialize(&mut body_reader, &())?.into_inner();
 
 		// The specification obliges us to count the total number of local variables while
 		// decoding the binary format.
@@ -127,7 +127,7 @@ impl Deserialize for FuncBody {
 			.try_fold(0u32, |acc, &Local { count, .. }| acc.checked_add(count))
 			.ok_or_else(|| Error::TooManyLocals)?;
 
-		let instructions = Instructions::deserialize(&mut body_reader, ())?;
+		let instructions = Instructions::deserialize(&mut body_reader, &())?;
 		body_reader.close()?;
 		Ok(FuncBody { locals: locals, instructions: instructions })
 	}

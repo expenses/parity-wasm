@@ -81,7 +81,7 @@ pub trait Deserialize<Options = ()> : Sized {
 	/// Serialization error produced by deserialization routine.
 	type Error: From<io::Error>;
 	/// Deserialize type from serial i/o
-	fn deserialize<R: io::Read>(reader: &mut R, options: Options) -> Result<Self, Self::Error>;
+	fn deserialize<R: io::Read>(reader: &mut R, options: &Options) -> Result<Self, Self::Error>;
 }
 
 /// Serialization to serial i/o. Takes self by value to consume less memory
@@ -166,6 +166,8 @@ pub enum Error {
 	DuplicatedNameSubsections(u8),
 	/// Unknown name subsection type.
 	UnknownNameSubsectionType(u8),
+	/// Invalid type
+	ValueFailedToValidate(ValueType)
 }
 
 impl fmt::Display for Error {
@@ -206,6 +208,7 @@ impl fmt::Display for Error {
 			Error::TooManyLocals => write!(f, "Too many locals"),
 			Error::DuplicatedNameSubsections(n) =>  write!(f, "Duplicated name subsections: {}", n),
 			Error::UnknownNameSubsectionType(n) => write!(f, "Unknown subsection type: {}", n),
+			Error::ValueFailedToValidate(value) => write!(f, "Value failed to validate: {}", value),
 		}
 	}
 }
@@ -247,6 +250,7 @@ impl ::std::error::Error for Error {
 			Error::TooManyLocals => "Too many locals",
 			Error::DuplicatedNameSubsections(_) =>  "Duplicated name subsections",
 			Error::UnknownNameSubsectionType(_) => "Unknown name subsections type",
+			Error::ValueFailedToValidate(_) => "Value failed to validate",
 		}
 	}
 }
@@ -275,8 +279,8 @@ pub struct Unparsed(pub Vec<u8>);
 impl Deserialize for Unparsed {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let len = VarUint32::deserialize(reader, ())?.into();
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let len = VarUint32::deserialize(reader, &())?.into();
 		let mut vec = vec![0u8; len];
 		reader.read(&mut vec[..])?;
 		Ok(Unparsed(vec))
@@ -290,7 +294,7 @@ impl From<Unparsed> for Vec<u8> {
 }
 
 /// Deserialize deserializable type from buffer.
-pub fn deserialize_buffer<T: Deserialize<V>, V: Validator>(contents: &[u8], validator: V) -> Result<T, T::Error> {
+pub fn deserialize_buffer<T: Deserialize<V>, V: Validator>(contents: &[u8], validator: &V) -> Result<T, T::Error> {
 	let mut reader = io::Cursor::new(contents);
 	let result = T::deserialize(&mut reader, validator)?;
 	if reader.position() != contents.len() {
@@ -310,7 +314,7 @@ pub fn serialize<T: Serialize>(val: T) -> Result<Vec<u8>, T::Error> {
 
 /// Deserialize module from the file.
 #[cfg(feature = "std")]
-pub fn deserialize_file<P: AsRef<::std::path::Path>, V: Validator>(p: P, validator: V) -> Result<Module, Error> {
+pub fn deserialize_file<P: AsRef<::std::path::Path>, V: Validator>(p: P, validator: &V) -> Result<Module, Error> {
 	let mut f = ::std::fs::File::open(p)
 		.map_err(|e| Error::HeapOther(format!("Can't read from the file: {:?}", e)))?;
 
@@ -329,7 +333,9 @@ pub fn serialize_to_file<P: AsRef<::std::path::Path>>(p: P, module: Module) -> R
 	Ok(())
 }
 
+/// WASM Validator. Useful for things like smart contracts, where `f32`s aren't allowed.
 pub trait Validator {
+	/// Validate a value.
 	fn validate_value(&self, value: ValueType) -> bool;
 }
 

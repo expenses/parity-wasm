@@ -76,17 +76,17 @@ impl RelocSection {
 		name: String,
 		rdr: &mut R,
 	) -> Result<Self, Error> {
-		let section_id = VarUint32::deserialize(rdr, ())?.into();
+		let section_id = VarUint32::deserialize(rdr, &())?.into();
 
 		let relocation_section_name =
 			if section_id == 0 {
-				Some(String::deserialize(rdr, ())?)
+				Some(String::deserialize(rdr, &())?)
 			}
 			else {
 				None
 			};
 
-		let entries = CountedList::deserialize(rdr, ())?.into_inner();
+		let entries = CountedList::deserialize(rdr, &())?.into_inner();
 
 		Ok(RelocSection {
 			name,
@@ -208,49 +208,49 @@ pub enum RelocationEntry {
 impl Deserialize for RelocationEntry {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(rdr: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		match VarUint7::deserialize(rdr, ())?.into() {
+	fn deserialize<R: io::Read>(rdr: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		match VarUint7::deserialize(rdr, &())?.into() {
 			FUNCTION_INDEX_LEB => Ok(RelocationEntry::FunctionIndexLeb {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
 			}),
 
 			TABLE_INDEX_SLEB => Ok(RelocationEntry::TableIndexSleb {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
 			}),
 
 			TABLE_INDEX_I32 => Ok(RelocationEntry::TableIndexI32 {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
 			}),
 
 			MEMORY_ADDR_LEB => Ok(RelocationEntry::MemoryAddressLeb {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
-				addend: VarInt32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
+				addend: VarInt32::deserialize(rdr, &())?.into(),
 			}),
 
 			MEMORY_ADDR_SLEB => Ok(RelocationEntry::MemoryAddressSleb {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
-				addend: VarInt32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
+				addend: VarInt32::deserialize(rdr, &())?.into(),
 			}),
 
 			MEMORY_ADDR_I32 => Ok(RelocationEntry::MemoryAddressI32 {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
-				addend: VarInt32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
+				addend: VarInt32::deserialize(rdr, &())?.into(),
 			}),
 
 			TYPE_INDEX_LEB => Ok(RelocationEntry::TypeIndexLeb {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
 			}),
 
 			GLOBAL_INDEX_LEB => Ok(RelocationEntry::GlobalIndexLeb {
-				offset: VarUint32::deserialize(rdr, ())?.into(),
-				index: VarUint32::deserialize(rdr, ())?.into(),
+				offset: VarUint32::deserialize(rdr, &())?.into(),
+				index: VarUint32::deserialize(rdr, &())?.into(),
 			}),
 
 			entry_type => Err(Error::UnknownValueType(entry_type as i8)),
@@ -327,7 +327,7 @@ mod tests {
 	#[test]
 	fn reloc_section() {
 		let module =
-			deserialize_file("./res/cases/v1/relocatable.wasm", ()).expect("Module should be deserialized")
+			deserialize_file("./res/cases/v1/relocatable.wasm", &()).expect("Module should be deserialized")
 			.parse_reloc().expect("Reloc section should be deserialized");
 		let mut found = false;
 		for section in module.sections() {

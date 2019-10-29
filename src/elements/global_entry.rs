@@ -29,9 +29,9 @@ impl GlobalEntry {
 impl Deserialize for GlobalEntry {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let global_type = GlobalType::deserialize(reader, ())?;
-		let init_expr = InitExpr::deserialize(reader, ())?;
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let global_type = GlobalType::deserialize(reader, &())?;
+		let init_expr = InitExpr::deserialize(reader, &())?;
 
 		Ok(GlobalEntry {
 			global_type: global_type,

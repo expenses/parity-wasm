@@ -71,10 +71,10 @@ impl Deserialize for ElementSegment {
 	type Error = Error;
 
 	#[cfg(not(feature="bulk"))]
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let index: u32 = VarUint32::deserialize(reader, ())?.into();
-		let offset = InitExpr::deserialize(reader, ())?;
-		let members: Vec<u32> = CountedList::<VarUint32>::deserialize(reader, ())?
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let index: u32 = VarUint32::deserialize(reader, &())?.into();
+		let offset = InitExpr::deserialize(reader, &())?;
+		let members: Vec<u32> = CountedList::<VarUint32, _>::deserialize(reader, &())?
 			.into_inner()
 			.into_iter()
 			.map(Into::into)
@@ -88,24 +88,24 @@ impl Deserialize for ElementSegment {
 	}
 
 	#[cfg(feature="bulk")]
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		// This piece of data was treated as `index` [of the table], but was repurposed
 		// for flags in bulk-memory operations proposal.
-		let flags: u32 = VarUint32::deserialize(reader, ())?.into();
+		let flags: u32 = VarUint32::deserialize(reader, &())?.into();
 		let index = if flags == FLAG_MEMZERO || flags == FLAG_PASSIVE {
 			0u32
 		} else if flags == FLAG_MEM_NONZERO {
-			VarUint32::deserialize(reader, ())?.into()
+			VarUint32::deserialize(reader, &())?.into()
 		} else {
 			return Err(Error::InvalidSegmentFlags(flags))
 		};
 		let offset = if flags == FLAG_PASSIVE {
 			None
 		} else {
-			Some(InitExpr::deserialize(reader, ())?)
+			Some(InitExpr::deserialize(reader, &())?)
 		};
 
-		let funcs: Vec<u32> = CountedList::<VarUint32>::deserialize(reader, ())?
+		let funcs: Vec<u32> = CountedList::<VarUint32>::deserialize(reader, &())?
 			.into_inner()
 			.into_iter()
 			.map(Into::into)
@@ -213,10 +213,10 @@ impl Deserialize for DataSegment {
 	type Error = Error;
 
 	#[cfg(not(feature="bulk"))]
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let index = VarUint32::deserialize(reader, ())?;
-		let offset = InitExpr::deserialize(reader, ())?;
-		let value_len = u32::from(VarUint32::deserialize(reader, ())?) as usize;
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let index = VarUint32::deserialize(reader, &())?;
+		let offset = InitExpr::deserialize(reader, &())?;
+		let value_len = u32::from(VarUint32::deserialize(reader, &())?) as usize;
 		let value_buf = buffered_read!(65536, value_len, reader);
 
 		Ok(DataSegment {
@@ -227,21 +227,21 @@ impl Deserialize for DataSegment {
 	}
 
 	#[cfg(feature="bulk")]
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let flags: u32 = VarUint32::deserialize(reader, ())?.into();
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let flags: u32 = VarUint32::deserialize(reader, &())?.into();
 		let index = if flags == FLAG_MEMZERO || flags == FLAG_PASSIVE {
 			0u32
 		} else if flags == FLAG_MEM_NONZERO {
-			VarUint32::deserialize(reader, ())?.into()
+			VarUint32::deserialize(reader, &())?.into()
 		} else {
 			return Err(Error::InvalidSegmentFlags(flags))
 		};
 		let offset = if flags == FLAG_PASSIVE {
 			None
 		} else {
-			Some(InitExpr::deserialize(reader, ())?)
+			Some(InitExpr::deserialize(reader, &())?)
 		};
-		let value_len = u32::from(VarUint32::deserialize(reader, ())?) as usize;
+		let value_len = u32::from(VarUint32::deserialize(reader, &())?) as usize;
 		let value_buf = buffered_read!(65536, value_len, reader);
 
 		Ok(DataSegment {

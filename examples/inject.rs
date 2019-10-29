@@ -32,7 +32,7 @@ fn main() {
 		return;
 	}
 
-	let mut module = parity_wasm::deserialize_file(&args[1], ()).unwrap();
+	let mut module = parity_wasm::deserialize_file(&args[1], &()).unwrap();
 
 	for section in module.sections_mut() {
 		match section {

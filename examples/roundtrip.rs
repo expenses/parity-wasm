@@ -9,7 +9,7 @@ fn main() {
 		return;
 	}
 
-	let module = match parity_wasm::deserialize_file(&args[1], ())
+	let module = match parity_wasm::deserialize_file(&args[1], &())
 		.expect("Failed to load module")
 		.parse_names()
 		.and_then(|module| module.parse_reloc())

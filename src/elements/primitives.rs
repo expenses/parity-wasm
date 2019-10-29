@@ -1,6 +1,6 @@
 use crate::rust::{vec::Vec, string::String};
 use crate::{io, elements};
-use super::{Error, Deserialize, Serialize};
+use super::{Error, Deserialize, Serialize, Validator};
 
 /// Unsigned variable-length integer, limited to 32 bits,
 /// represented by at most 5 bytes that may contain padding 0x80 bytes.
@@ -35,7 +35,7 @@ impl From<usize> for VarUint32 {
 impl Deserialize for VarUint32 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut res = 0;
 		let mut shift = 0;
 		let mut u8buf = [0u8; 1];
@@ -91,7 +91,7 @@ impl From<VarUint64> for u64 {
 impl Deserialize for VarUint64 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut res = 0;
 		let mut shift = 0;
 		let mut u8buf = [0u8; 1];
@@ -158,7 +158,7 @@ impl From<u8> for VarUint7 {
 impl Deserialize for VarUint7 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut u8buf = [0u8; 1];
 		reader.read(&mut u8buf)?;
 		Ok(VarUint7(u8buf[0]))
@@ -194,7 +194,7 @@ impl From<i8> for VarInt7 {
 impl Deserialize for VarInt7 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut u8buf = [0u8; 1];
 		reader.read(&mut u8buf)?;
 
@@ -242,7 +242,7 @@ impl From<u8> for Uint8 {
 impl Deserialize for Uint8 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut u8buf = [0u8; 1];
 		reader.read(&mut u8buf)?;
 		Ok(Uint8(u8buf[0]))
@@ -278,7 +278,7 @@ impl From<i32> for VarInt32 {
 impl Deserialize for VarInt32 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut res = 0;
 		let mut shift = 0;
 		let mut u8buf = [0u8; 1];
@@ -351,7 +351,7 @@ impl From<i64> for VarInt64 {
 impl Deserialize for VarInt64 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut res = 0i64;
 		let mut shift = 0;
 		let mut u8buf = [0u8; 1];
@@ -411,7 +411,7 @@ pub struct Uint32(u32);
 impl Deserialize for Uint32 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut buf = [0u8; 4];
 		reader.read(&mut buf)?;
 		// todo check range
@@ -445,7 +445,7 @@ pub struct Uint64(u64);
 impl Deserialize for Uint64 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut buf = [0u8; 8];
 		reader.read(&mut buf)?;
 		// todo check range
@@ -492,7 +492,7 @@ impl From<bool> for VarUint1 {
 impl Deserialize for VarUint1 {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
 		let mut u8buf = [0u8; 1];
 		reader.read(&mut u8buf)?;
 		match u8buf[0] {
@@ -517,8 +517,8 @@ impl Serialize for VarUint1 {
 impl Deserialize for String {
 	type Error = Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let length = u32::from(VarUint32::deserialize(reader, ())?) as usize;
+	fn deserialize<R: io::Read>(reader: &mut R, _options: &()) -> Result<Self, Self::Error> {
+		let length = u32::from(VarUint32::deserialize(reader, &())?) as usize;
 		if length > 0 {
 			String::from_utf8(buffered_read!(1024, length, reader)).map_err(|_| Error::NonUtf8String)
 		}
@@ -541,21 +541,23 @@ impl Serialize for String {
 /// List for reading sequence of elements typed `T`, given
 /// they are preceded by length (serialized as VarUint32).
 #[derive(Debug, Clone)]
-pub struct CountedList<T: Deserialize>(Vec<T>);
+pub struct CountedList<T: Deserialize<V>, V: Validator>(Vec<T>, std::marker::PhantomData<V>);
 
-impl<T: Deserialize> CountedList<T> {
+impl<V: Validator, T: Deserialize<V>> CountedList<T, V> {
 	/// Destroy counted list returing inner vector.
 	pub fn into_inner(self) -> Vec<T> { self.0 }
 }
 
-impl<T: Deserialize> Deserialize for CountedList<T> where T::Error: From<Error> {
+impl<V: Validator, T: Deserialize<V>> Deserialize<V> for CountedList<T, V>
+	where T::Error: From<Error>
+{
 	type Error = T::Error;
 
-	fn deserialize<R: io::Read>(reader: &mut R, _options: ()) -> Result<Self, Self::Error> {
-		let count: usize = VarUint32::deserialize(reader, ())?.into();
+	fn deserialize<R: io::Read>(reader: &mut R, validator: &V) -> Result<Self, Self::Error> {
+		let count: usize = VarUint32::deserialize(reader, &())?.into();
 		let mut result = Vec::new();
-		for _ in 0..count { result.push(T::deserialize(reader, ())?); }
-		Ok(CountedList(result))
+		for _ in 0..count { result.push(T::deserialize(reader, validator)?); }
+		Ok(CountedList(result, std::marker::PhantomData))
 	}
 }
 
@@ -631,7 +633,7 @@ mod tests {
 	}
 
 	fn varuint32_de_test(dt: Vec<u8>, expected: u32) {
-		let val: VarUint32 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
+		let val: VarUint32 = super::super::deserialize_buffer(&dt, &()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -648,7 +650,7 @@ mod tests {
 	}
 
 	fn varint32_de_test(dt: Vec<u8>, expected: i32) {
-		let val: VarInt32 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
+		let val: VarInt32 = super::super::deserialize_buffer(&dt, &()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -665,7 +667,7 @@ mod tests {
 	}
 
 	fn varuint64_de_test(dt: Vec<u8>, expected: u64) {
-		let val: VarUint64 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
+		let val: VarUint64 = super::super::deserialize_buffer(&dt, &()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -682,7 +684,7 @@ mod tests {
 	}
 
 	fn varint64_de_test(dt: Vec<u8>, expected: i64) {
-		let val: VarInt64 = super::super::deserialize_buffer(&dt, ()).expect("buf to be serialized");
+		let val: VarInt64 = super::super::deserialize_buffer(&dt, &()).expect("buf to be serialized");
 		assert_eq!(expected, val.into());
 	}
 
@@ -761,19 +763,19 @@ mod tests {
 
 	#[test]
 	fn varint64_bad_extended() {
-		let res = deserialize_buffer::<VarInt64, _>(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x6f][..], ());
+		let res = deserialize_buffer::<VarInt64, _>(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x6f][..], &());
 		assert!(res.is_err());
 	}
 
 	#[test]
 	fn varint32_bad_extended() {
-		let res = deserialize_buffer::<VarInt32, _>(&[0x80, 0x80, 0x80, 0x80, 0x6f][..], ());
+		let res = deserialize_buffer::<VarInt32, _>(&[0x80, 0x80, 0x80, 0x80, 0x6f][..], &());
 		assert!(res.is_err());
 	}
 
 	#[test]
 	fn varint32_bad_extended2() {
-		let res = deserialize_buffer::<VarInt32, _>(&[0x80, 0x80, 0x80, 0x80, 0x41][..], ());
+		let res = deserialize_buffer::<VarInt32, _>(&[0x80, 0x80, 0x80, 0x80, 0x41][..], &());
 		assert!(res.is_err());
 	}
 
@@ -789,7 +791,7 @@ mod tests {
 	fn varint64_too_long() {
 		assert!(
 			deserialize_buffer::<VarInt64, _>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], &()
 			).is_err()
 		);
 	}
@@ -798,7 +800,7 @@ mod tests {
 	fn varint32_too_long() {
 		assert!(
 			deserialize_buffer::<VarInt32, _>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], &()
 			).is_err()
 		);
 	}
@@ -807,7 +809,7 @@ mod tests {
 	fn varuint64_too_long() {
 		assert!(
 			deserialize_buffer::<VarUint64, _>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], &()
 			).is_err()
 		);
 	}
@@ -816,7 +818,7 @@ mod tests {
 	fn varuint32_too_long() {
 		assert!(
 			deserialize_buffer::<VarUint32, _>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], ()
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0x00][..], &()
 			).is_err()
 		);
 	}
@@ -825,7 +827,7 @@ mod tests {
 	fn varuint32_too_long_trailing() {
 		assert!(
 			deserialize_buffer::<VarUint32, _>(
-				&[0xff, 0xff, 0xff, 0xff, 0x7f][..], ()
+				&[0xff, 0xff, 0xff, 0xff, 0x7f][..], &()
 			).is_err()
 		);
 	}
@@ -834,7 +836,7 @@ mod tests {
 	fn varuint64_too_long_trailing() {
 		assert!(
 			deserialize_buffer::<VarUint64, _>(
-				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x04][..], ()
+				&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x04][..], &()
 			).is_err()
 		);
 	}
@@ -849,7 +851,7 @@ mod tests {
 
 	#[test]
 	fn varint7_invalid() {
-		match deserialize_buffer::<VarInt7, _>(&[240], ()) {
+		match deserialize_buffer::<VarInt7, _>(&[240], &()) {
 			Err(Error::InvalidVarInt7(_)) => {},
 			_ => panic!("Should be invalid varint7 error!")
 		}
@@ -857,13 +859,13 @@ mod tests {
 
 	#[test]
 	fn varint7_neg() {
-		assert_eq!(-0x10i8, deserialize_buffer::<VarInt7, _>(&[0x70], ()).expect("fail").into());
+		assert_eq!(-0x10i8, deserialize_buffer::<VarInt7, _>(&[0x70], &()).expect("fail").into());
 	}
 
 	#[test]
 	fn varuint32_too_long_nulled() {
 		match deserialize_buffer::<VarUint32, _>(
-			&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x78], ()
+			&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x78], &()
 		) {
 			Err(Error::InvalidVarUint32) => {},
 			_ => panic!("Should be invalid varuint32"),
@@ -891,8 +893,8 @@ mod tests {
 			0x09,
 		];
 
-		let list: CountedList<VarInt7> =
-			deserialize_buffer(&payload, ()).expect("type_section be deserialized");
+		let list: CountedList<VarInt7, _> =
+			deserialize_buffer(&payload, &()).expect("type_section be deserialized");
 
 		let vars = list.into_inner();
 		assert_eq!(5, vars.len());
